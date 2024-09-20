@@ -1,84 +1,92 @@
 """Крестики-нолики"""
+import tkinter as tk
 import random
 
 class TicTacToe:
-    def __init__(self):
-        self.board = [' ' for _ in range(9)]
-        self.current_player = 'X'
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Крестики-нолики")
+        self.board = [" " for _ in range(9)]  # Пустое поле
+        self.current_player = "X"  # Начинает игрок X
+        self.buttons = []
+        self.create_buttons()
+        self.reset_button = tk.Button(self.root, text="Сбросить", command=self.reset_game)
+        self.reset_button.grid(row=3, column=0, columnspan=3)
 
-    def print_board(self):
-        print(f"{self.board[0]} | {self.board[1]} | {self.board[2]}")
-        print("--+---+--")
-        print(f"{self.board[3]} | {self.board[4]} | {self.board[5]}")
-        print("--+---+--")
-        print(f"{self.board[6]} | {self.board[7]} | {self.board[8]}")
-        print()
+    def create_buttons(self):
+        for i in range(9):
+            button = tk.Button(self.root, text=" ", font='Arial 20', width=5, height=2,
+                               command=lambda i=i: self.player_move(i))
+            button.grid(row=i // 3, column=i % 3)
+            self.buttons.append(button)
 
-    def make_move(self, position):
-        if self.board[position] == ' ':
-            self.board[position] = self.current_player
-            return True
-        return False
-
-    def check_winner(self):
-        winning_combinations = [
-            [0, 1, 2],
-            [3, 4, 5],
-            [6, 7, 8],
-            [0, 3, 6],
-            [1, 4, 7],
-            [2, 5, 8],
-            [0, 4, 8],
-            [2, 4, 6],
-        ]
-        for combo in winning_combinations:
-            if self.board[combo[0]] == self.board[combo[1]] == self.board[combo[2]] != ' ':
-                return self.board[combo[0]]
-        return None
-
-    def is_draw(self):
-        return ' ' not in self.board
-
-    def switch_player(self):
-        self.current_player = 'O' if self.current_player == 'X' else 'X'
+    def player_move(self, index):
+        if self.board[index] == " ":
+            self.board[index] = self.current_player
+            self.buttons[index].config(text=self.current_player)
+            if self.check_winner(self.current_player):
+                self.end_game(f"Игрок {self.current_player} выиграл!")
+            elif " " not in self.board:
+                self.end_game("Ничья!")
+            else:
+                self.current_player = "O"  # Переход к компьютеру
+                self.computer_move()
 
     def computer_move(self):
-        available_moves = [i for i in range(9) if self.board[i] == ' ']
-        move = random.choice(available_moves)
-        self.make_move(move)
-        print(f"Компьютер (O) сделал ход на позицию {move + 1}.")
-
-    def play(self):
-        while True:
-            self.print_board()
-            if self.current_player == 'X':
-                position = int(input("Игрок X, введите позицию (1-9): ")) - 1
-                if position < 0 or position > 8:
-                    print("Некорректный ввод, попробуйте снова.")
-                    continue
+        available_moves = [i for i in range(9) if self.board[i] == " "]
+        move = self.get_best_move(available_moves)
+        
+        if move is not None:
+            self.board[move] = self.current_player
+            self.buttons[move].config(text=self.current_player)
+            if self.check_winner(self.current_player):
+                self.end_game("Компьютер выиграл!")
+            elif " " not in self.board:
+                self.end_game("Ничья!")
             else:
-                self.computer_move()
-                position = None 
+                self.current_player = "X"  # Переход к игроку
 
-            if self.current_player == 'X' and not self.make_move(position):
-                print("Эта позиция уже занята, попробуйте другую.")
-            elif self.current_player == 'O':
-                if self.check_winner():
-                    self.print_board()
-                    print("Неудача! Игрок O победил!")
-                    break
+    def get_best_move(self, available_moves):
+        for move in available_moves:
+            self.board[move] = self.current_player
+            if self.check_winner(self.current_player):
+                self.board[move] = " "
+                return move
+            self.board[move] = " "
+        
+        for move in available_moves:
+            self.board[move] = "X" if self.current_player == "O" else "O"
+            if self.check_winner("X" if self.current_player == "O" else "O"):
+                self.board[move] = " "
+                return move
+            self.board[move] = " "
 
-            if self.check_winner():
-                self.print_board()
-                print(f"Поздравляем! Игрок {self.current_player} победил!")
-                break
-            if self.is_draw():
-                self.print_board()
-                print("Ничья!")
-                break
-            
-            self.switch_player()
+        return random.choice(available_moves) if available_moves else None
+
+    def check_winner(self, player):
+        win_conditions = [(0, 1, 2), (3, 4, 5), (6, 7, 8),
+                          (0, 3, 6), (1, 4, 7), (2, 5, 8),
+                          (0, 4, 8), (2, 4, 6)]
+        return any(all(self.board[i] == player for i in condition) for condition in win_conditions)
+
+    def end_game(self, message):
+        for button in self.buttons:
+            button.config(state="disabled")
+        self.display_message(message)
+
+    def display_message(self, message):
+        message_label = tk.Label(self.root, text=message, font='Arial 14')
+        message_label.grid(row=4, column=0, columnspan=3)
+
+    def reset_game(self):
+        self.board = [" " for _ in range(9)]
+        self.current_player = "X"
+        for button in self.buttons:
+            button.config(text=" ", state="normal")
+        for widget in self.root.grid_slaves(row=4):  # Убираем сообщение о результате
+            widget.destroy()
 
 if __name__ == "__main__":
-    game = TicTacToe()
-    game.play()
+    root = tk.Tk()
+    game = TicTacToe(root)
+    root.mainloop()
